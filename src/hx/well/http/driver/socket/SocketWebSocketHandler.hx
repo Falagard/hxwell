@@ -9,8 +9,6 @@ import haxe.crypto.Sha1;
 import haxe.crypto.Base64;
 import haxe.Exception;
 import sys.net.Socket;
-import haxe.crypto.random.SecureRandom;
-import haxe.crypto.random.SecureRandom.SecureRandom.bytes;
 
 using StringTools;
 
@@ -253,7 +251,12 @@ class SocketWebSocketHandler {
     }
 
     private static function generateSessionId():String {
-        return SecureRandom.bytes(16).toHex().toUpperCase();
+        var id = "";
+        var chars = "0123456789ABCDEF";
+        for (i in 0...32) {
+            id += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return id;
     }
 }
 #end
