@@ -56,7 +56,7 @@ class SocketRequestParser {
         {
             var found:Bool = false;
             buffer[index] = input.readByte();
-            if (index >= 4)
+            if (index >= 3)
             {
                 found = true;
                 for(i in 0...4)
