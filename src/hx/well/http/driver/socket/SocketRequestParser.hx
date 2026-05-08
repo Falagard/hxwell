@@ -13,7 +13,7 @@ class SocketRequestParser {
     #if (!php && !js)
     public static function parseFromSocket(socket:Socket):Request
     {
-        var requestBytes:Bytes = parseFromInputProtocol(socket.input);
+        var requestBytes:Bytes = parseFromInputProtocol(socket.input, socket);
         var request:Request = RequestParser.parseFromRawRequest(requestBytes.toString());
         request.requestBytes = requestBytes;
         request.ip = socket.peer().host.toString();
@@ -40,9 +40,9 @@ class SocketRequestParser {
     }
 
     #if !php
-    private static function parseFromInputProtocol(input:Input):Bytes
+    private static function parseFromInputProtocol(input:Input, ?socket:Socket):Bytes
     {
-        var maximumHeaderBuffer:Int = Config.get("http.max_buffer");
+        var maximumHeaderBuffer:Int = 16384; // Hard limit 16KB
 
         #if cpp
         var buffer:Array<cpp.UInt8> = new Array<cpp.UInt8>();
@@ -52,10 +52,17 @@ class SocketRequestParser {
         var buffer:Array<Int> = new Array<Int>();
         #end
         var index:Int = 0;
+        var found:Bool = false;
         while (true)
         {
-            var found:Bool = false;
-            buffer[index] = input.readByte();
+            var byte:Int = -1;
+            try {
+                byte = input.readByte();
+            } catch(e:Dynamic) {
+                break;
+            }
+            
+            buffer[index] = byte;
             if (index >= 3)
             {
                 found = true;
@@ -75,11 +82,17 @@ class SocketRequestParser {
 
             if(buffer.length > maximumHeaderBuffer)
             {
+                if (socket != null) {
+                    try {
+                        socket.output.writeString("HTTP/1.1 431 Request Header Fields Too Large\r\nConnection: close\r\n\r\n");
+                        socket.output.flush();
+                    } catch(e:Dynamic) {}
+                }
                 abort(431);
             }
         }
 
-        buffer.resize(buffer.length - httpRequestEnd.length);
+        buffer.resize(buffer.length - (found ? httpRequestEnd.length : 0));
 
         #if cpp
         return Bytes.ofData(buffer);

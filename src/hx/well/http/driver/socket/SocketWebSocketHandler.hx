@@ -20,6 +20,12 @@ using StringTools;
  */
 class SocketWebSocketHandler {
     private static inline var WS_MAGIC_STRING = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+    
+    /**
+     * Maximum allowed WebSocket message size in bytes.
+     * Can be configured globally to prevent memory exhaustion attacks.
+     */
+    public static var maxMessageSize:Int = 1024 * 1024 * 10; // Default 10MB
 
     private static function computeWebSocketAccept(key:String):String {
         var concat = key + WS_MAGIC_STRING;
@@ -168,6 +174,12 @@ class SocketWebSocketHandler {
                 for(i in 0...4)
                     low = (low << 8) | socket.input.readByte();
                 payloadLength = low; // Assume it fits in an Int
+            }
+
+            // Enforce message size limit to prevent memory exhaustion
+            if (payloadLength > maxMessageSize) {
+                Sys.println("[hxwell] WebSocket frame too large: " + payloadLength + " > " + maxMessageSize);
+                throw new Exception("WebSocket frame too large: " + payloadLength);
             }
 
             var maskKey:Bytes = null;

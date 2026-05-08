@@ -45,9 +45,13 @@ class RequestParser {
         var version = requestLine[2];
         var headers = new Map<String, String>();
         for (i in 1...lines.length) {
-            var header = lines[i].split(": ");
-            if (header.length == 2) {
-                headers.set(header[0], header[1]);
+            var line = lines[i];
+            if (line == "") continue;
+            var colonIndex = line.indexOf(":");
+            if (colonIndex != -1) {
+                var name = line.substring(0, colonIndex).trim();
+                var value = line.substring(colonIndex + 1).trim();
+                headers.set(name, value);
             }
         }
 
