@@ -202,6 +202,7 @@ class SocketWebSocketHandler {
 
             return {opcode: opcode, payload: payload};
         } catch(e:Dynamic) {
+            Sys.println("[hxwell] readFrame exception: " + e + "\n" + haxe.CallStack.toString(haxe.CallStack.exceptionStack()));
             return null;
         }
     }
