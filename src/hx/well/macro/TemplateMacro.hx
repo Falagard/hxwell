@@ -17,8 +17,16 @@ class TemplateMacro {
     public static function build():Array<Field> {
 
         // haxelib libpath
-        var process = new Process("haxelib", ["libpath", "hxwell"]);
-        createTemplateData('${process.stdout.readLine()}/resources/views');
+        var hxwellPath:String = null;
+        try {
+            var process = new Process("haxelib", ["libpath", "hxwell"]);
+            hxwellPath = process.stdout.readLine();
+            process.close();
+        } catch (e:Dynamic) {
+            // Not resolvable through haxelib (e.g. a plain -cp checkout): only app views apply.
+        }
+        if (hxwellPath != null)
+            createTemplateData('${hxwellPath}/resources/views');
 
         // Program Path, Dominant
         createTemplateData('${Sys.getCwd()}/resources/views');
@@ -81,6 +89,11 @@ class TemplateMacro {
         // Recursively add resources from the specified path
         path = Path.normalize(path);
         rootPath = Path.normalize(rootPath);
+        // An app without server-rendered views has no resources/views directory. Treat that
+        // as "no templates" instead of failing the build with a readDirectory error (which
+        // then surfaces as the misleading "Class<TemplateData> has no field data").
+        if (!FileSystem.exists(path) || !FileSystem.isDirectory(path))
+            return;
         var files = FileSystem.readDirectory(path);
         for (file in files) {
             var fullPath = path + "/" + file;
