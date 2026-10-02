@@ -19,8 +19,16 @@ class Environment {
     public static function load(path:String = ".env"):Void {
         var data:StringMap<String> = new StringMap();
 
+        if (path == null)
+            path = ".env";
+
         if (!FileSystem.exists(path)) {
-            throw path + " file not found";
+            // No .env file: configure from the process environment instead, so an app can be
+            // run purely from environment variables (containers, CI, 12-factor deployments).
+            for (key => value in Sys.environment())
+                data.set(key, value);
+            Environment.data = SynchronizedMap.from(data);
+            checkEnv(path);
             return;
         }
 
@@ -65,7 +73,7 @@ class Environment {
 
         Environment.data = SynchronizedMap.from(data);
 
-        checkEnv();
+        checkEnv(path);
     }
 
     public static inline function env(key:String, ?defaultValue:String):String {
@@ -104,10 +112,13 @@ class Environment {
         return value;
     }
 
-    private static function checkEnv():Void {
+    private static function checkEnv(path:String):Void {
         var appKey = get("APP_KEY", "");
 
         if(appKey == "") {
+            if (!FileSystem.exists(path))
+                throw path + " file not found and APP_KEY is not set in the environment. Create " + path
+                    + " (generate a key with 'haxelib run hxwell generate:key'), set APP_KEY, or compile with -D disable_env";
             throw "APP_KEY is not set in .env file, generate it using 'haxelib run hxwell generate:key'";
         }
     }
